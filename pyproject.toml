@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "sansa"
+version = "0.1.0"
+description = ""
+authors = ["Neil Van Alino <nvq.alino@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+openai = "^1.51.2"
+streamlit = "^1.39.0"
+faster-whisper = "^1.0.3"
+mypy = "^1.12.0"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
