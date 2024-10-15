@@ -1,16 +1,17 @@
+import os
 import openai
 import streamlit as st
 from faster_whisper import WhisperModel
+from dotenv import load_dotenv
+
+load_dotenv()
+
+math_model_url = os.environ.get("MATH_MODEL", "http://localhost:8707")
+writer_model_url = os.environ.get("WRITER_MODEL", "http://localhost:8704")
 
 stt_model = WhisperModel("medium.en", device="cpu", compute_type="int8")
-
-math_model = openai.OpenAI(
-    base_url="http://localhost:8707", api_key="sk-no-key-required"
-)
-
-writer_model = openai.OpenAI(
-    base_url="http://localhost:8705", api_key="sk-no-key-required"
-)
+math_model = openai.OpenAI(base_url=math_model_url, api_key="sk-no-key-required")
+writer_model = openai.OpenAI(base_url=writer_model_url, api_key="sk-no-key-required")
 
 
 st.set_page_config(page_title="Sansa")
@@ -57,7 +58,7 @@ def entry():
         st.markdown(f"Transaction transcript:\n\n{transcript}")
 
         with st.spinner("Computing..."):
-            msg = [
+            msg_compute = [
                 {
                     "role": "system",
                     "content": "You will assist in computing sales transactions. Reason step by step, and put your final answer within \\boxed{}.",
@@ -67,19 +68,19 @@ def entry():
                     "content": transcript,
                 },
             ]
-            math_res = call_llm(msg, math_model)
+            math_res = call_llm(msg_compute, math_model)
 
-            msg = [
+            msg_edit = [
                 {
                     "role": "system",
                     "content": "You will edit a transaction record to use the appropriate currency.",
                 },
                 {
                     "role": "user",
-                    "content": f"Identify the currency being used in the text, then replace it to use Philippine Pesos as the currency:\n\n{math_res}",
+                    "content": f"Text:\n\n{math_res}\n\n\nTask: Identify the currency or unit being used in the text, then replace it to use Philippine Pesos as the currency or unit. Do not explain how, why, or what you edited. Do not paraphrase the text.",
                 },
             ]
-            writer_res = call_llm(msg, writer_model, 0.4)
+            writer_res = call_llm(msg_edit, writer_model, 0.4)
 
         st.markdown(f"Transaction computed:\n\n{writer_res}")
 

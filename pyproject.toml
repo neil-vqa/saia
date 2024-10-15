@@ -11,6 +11,7 @@ python = "^3.10"
 openai = "^1.51.2"
 streamlit = "^1.39.0"
 faster-whisper = "^1.0.3"
+python-dotenv = "^1.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
