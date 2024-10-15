@@ -55,7 +55,7 @@ def entry():
             for s in segments:
                 transcript = f"{transcript} {s.text}"
 
-        st.markdown(f"Transaction transcript:\n\n{transcript}")
+        st.markdown(f"#### Transaction transcript:\n\n{transcript}")
 
         with st.spinner("Computing..."):
             msg_compute = [
@@ -80,9 +80,9 @@ def entry():
                     "content": f"Text:\n\n{math_res}\n\n\nTask: Identify the currency or unit being used in the text, then replace it to use Philippine Pesos as the currency or unit. Do not explain how, why, or what you edited. Do not paraphrase the text.",
                 },
             ]
-            writer_res = call_llm(msg_edit, writer_model, 0.4)
+            writer_res = call_llm(msg_edit, writer_model)
 
-        st.markdown(f"Transaction computed:\n\n{writer_res}")
+        st.markdown(f"#### Transaction computed:\n\n{writer_res}")
 
 
 if __name__ == "__main__":
