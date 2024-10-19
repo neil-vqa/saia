@@ -82,7 +82,7 @@ def compute_by_llm(transcript):
         msg_compute = [
             {
                 "role": "system",
-                "content": "You will assist in computing sales transactions in pesos as the currency or monetary unit. Reason step by step, then give your final answer within \\boxed{}.",
+                "content": "You will assist in computing sales transactions in pesos as the currency or monetary unit. Please integrate natural language reasoning with programs to solve the problem above, and put your final answer within \\boxed{}.",
             },
             {
                 "role": "user",
