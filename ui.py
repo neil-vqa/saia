@@ -159,36 +159,25 @@ def extract_python_code(response_text: str):
 
 
 def compute_by_llm_tir(transcript):
-    with st.spinner("Understanding the problem, solving, and verifying..."):
-        msg_compute = [
-            {
-                "role": "system",
-                "content": "You will assist in computing sales transactions in pesos as the currency or monetary unit. Please integrate natural language reasoning with programs to solve the problems, and put your final answer within \\boxed{}.",
-            },
-            {
-                "role": "user",
-                "content": f"{transcript}\n\nImportant: When writing the python code, ALWAYS store the final answer in the 'answer' variable.",
-            },
-        ]
-        res = math_model.chat.completions.create(
-            model="local-llm",
-            messages=msg_compute,
-            max_tokens=4096,
-            temperature=0.7,
-        )
+    messages = [
+        {
+            "role": "system",
+            "content": "You will assist in computing sales transactions in pesos as the currency or monetary unit. Please integrate natural language reasoning with programs to solve the problems, and put your final answer within \\boxed{}.",
+        },
+        {
+            "role": "user",
+            "content": f"{transcript}\n\nImportant: When writing the python code, ALWAYS store the final answer in the 'answer' variable.",
+        },
+    ]
 
-        python_code, modified_response, last_boxed_sentence = extract_python_code(
-            res.choices[0].message.content
-        )
-        st.markdown(modified_response)
-        with st.expander("See code"):
-            st.markdown(f"""```python\n{python_code}""")
+    res = math_model.chat.completions.create(
+        model="local-llm",
+        messages=messages,
+        max_tokens=4096,
+        temperature=0.7,
+    )
 
-        _, last_var_value = get_last_assigned_variable_name_and_value(python_code)
-
-        pattern = r"\\boxed\{([^\}]+)\}"
-        new_text = re.sub(pattern, f"{last_var_value}", last_boxed_sentence, count=1)
-        st.markdown(f"**{new_text}**")
+    return res
 
 
 def verify_by_symbolic(problem_transcript, prelim_solution):
@@ -232,13 +221,36 @@ def entry():
 
         # transcript = transcribe_transaction(audio_value)
         transcript = "The customer ordered a Spanish latte at 110 pesos with a 5% discount and also a strawberry matcha at 120 pesos without a discount. How much will the customer pay?"
-        st.markdown(f"#### Transaction transcript:\n\n{transcript}")
+        st.markdown(f"##### Transaction transcript:\n\n{transcript}")
 
         output = classifier_model(transcript, query_labels)
         if output["scores"][0] > 0.8:
-            # prelim = compute_by_llm(transcript)
-            # verify(transcript, prelim)
-            compute_by_llm_tir(transcript)
+            with st.spinner(
+                "Understanding the problem, then outlining and executing a step-by-step plan..."
+            ):
+                response = compute_by_llm_tir(transcript)
+
+                python_code, modified_response, last_boxed_sentence = (
+                    extract_python_code(response.choices[0].message.content)
+                )
+
+                st.markdown(f"##### Transaction query solution:")
+
+                with st.expander("Read the step-by-step plan"):
+                    st.markdown(modified_response)
+
+                with st.expander("View the code implementation"):
+                    st.markdown(f"""```python\n{python_code}""")
+
+                _, last_var_value = get_last_assigned_variable_name_and_value(
+                    python_code
+                )
+
+                pattern = r"\\boxed\{([^\}]+)\}"
+                new_text = re.sub(
+                    pattern, f"{last_var_value}", last_boxed_sentence, count=1
+                )
+                st.markdown(f"> {new_text}")
 
         else:
             st.markdown("Your query is not an order transaction.")
