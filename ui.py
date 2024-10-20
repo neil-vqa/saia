@@ -82,7 +82,7 @@ def compute_by_llm(transcript):
         msg_compute = [
             {
                 "role": "system",
-                "content": "You will assist in computing sales transactions in pesos as the currency or monetary unit. Please integrate natural language reasoning with programs to solve the problem above, and put your final answer within \\boxed{}.",
+                "content": "You will assist in computing sales transactions in pesos as the currency or monetary unit. Please integrate natural language reasoning with programs to solve the problems, and put your final answer within \\boxed{}.",
             },
             {
                 "role": "user",
@@ -117,7 +117,15 @@ def execute_code(expression):
     e = expression.replace("```", "")
     code = e.replace("python", "")
     exec(code, globals())
-    st.markdown(f"Answer: {answer}")
+
+
+def verify(problem_transcript, prelim_solution):
+    try:
+        expression = verify_by_symbolic(problem_transcript, prelim_solution)
+        execute_code(expression)
+        st.markdown(f"Answer: {answer}")
+    except:
+        verify(problem_transcript, prelim_solution)
 
 
 def entry():
@@ -131,8 +139,7 @@ def entry():
         output = classifier_model(transcript, query_labels)
         if output["scores"][0] > 0.8:
             prelim = compute_by_llm(transcript)
-            expression = verify_by_symbolic(transcript, prelim)
-            execute_code(expression)
+            verify(transcript, prelim)
 
         else:
             st.markdown("Your query is not an order transaction.")
