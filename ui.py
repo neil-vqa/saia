@@ -10,19 +10,15 @@ from transformers import pipeline
 load_dotenv()
 
 math_model_url = os.environ.get("MATH_MODEL", "http://localhost:8708")
-coder_model_url = os.environ.get("CODER_MODEL", "http://localhost:8706")
 
 stt_model = WhisperModel("medium.en", device="cpu", compute_type="int8")
 math_model = openai.OpenAI(base_url=math_model_url, api_key="sk-no-key-required")
-coder_model = openai.OpenAI(base_url=coder_model_url, api_key="sk-no-key-required")
 classifier_model = pipeline(
     "zero-shot-classification", model="tasksource/deberta-base-long-nli"
 )
 query_labels = ["order transaction"]
 
-
-st.set_page_config(page_title="Sansa")
-
+st.set_page_config(page_title="Saia | The Solopreneur's AI Assistant")
 st.markdown(
     """
     <style>
@@ -214,13 +210,22 @@ def verify(problem_transcript, prelim_solution):
 
 
 def entry():
+    st.subheader("Saia - The Solopreneur's AI Assistant")
+    with st.expander("Read the instructions"):
+        st.markdown(
+            """
+            ***What is this for?*** This AI Assistant will compute how much the customer will pay based on their order.
+
+            ***How to use this?*** Simply talk to the Assistant by saying the customer's order. You can say: "The customer ordered a Spanish Latte at 110 pesos with a 5% discount, an Americano at 100 pesos without a discount, and a Strawberry Matcha at 105 pesos with a 20% discount. How much will the customer pay?"
+
+            ***Now what?*** To get started, just click the Microphone icon below to start recording, say the orders, then click the stop button when you're finished saying them. Don't forget to ask "How much will the customer pay?" at the end.
+            """
+        )
+
     audio_value = st.experimental_audio_input("Record audio")
 
     if audio_value:
-        st.audio(audio_value)
-
-        # transcript = transcribe_transaction(audio_value)
-        transcript = "The customer ordered a Spanish latte at 110 pesos with a 5% discount and also a strawberry matcha at 120 pesos without a discount. How much will the customer pay?"
+        transcript = transcribe_transaction(audio_value)
         st.markdown(f"##### Transaction transcript:\n\n{transcript}")
 
         output = classifier_model(transcript, query_labels)
