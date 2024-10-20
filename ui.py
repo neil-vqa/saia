@@ -56,42 +56,6 @@ def call_llm(messages, client, temperature=0.7):
     return res.choices[0].message.content
 
 
-def compute_by_symbolic(transcript):
-    with st.spinner("Writing equation and solving..."):
-        msg_compute = [
-            {
-                "role": "system",
-                "content": "You will write python code that are sympy-compatible algebraic expressions to solve the problems. The code should be a function, and store the answer in the 'answer' variable",
-            },
-            {
-                "role": "user",
-                "content": f"Write an algebraic expression to solve this problem:\n\n\n{transcript}\n\n\nStrictly no explanations outside the code block.",
-            },
-        ]
-        math_res = call_llm(msg_compute, coder_model)
-
-    st.markdown(f"#### Symbolic computation:\n\n{math_res}")
-    return math_res
-
-
-def compute_by_llm(transcript):
-    with st.spinner("Understanding the problem and computing..."):
-        msg_compute = [
-            {
-                "role": "system",
-                "content": "You will assist in computing sales transactions in pesos as the currency or monetary unit. Please integrate natural language reasoning with programs to solve the problems, and put your final answer within \\boxed{}.",
-            },
-            {
-                "role": "user",
-                "content": transcript,
-            },
-        ]
-        math_res = call_llm(msg_compute, math_model)
-
-    st.markdown(f"#### LLM-based computation:\n\n{math_res}")
-    return math_res
-
-
 def get_last_assigned_variable_name_and_value(code):
     # Parse the code into an AST
     tree = ast.parse(code)
@@ -174,39 +138,6 @@ def compute_by_llm_tir(transcript):
     )
 
     return res
-
-
-def verify_by_symbolic(problem_transcript, prelim_solution):
-    with st.spinner("Verifying..."):
-        msg_compute = [
-            {
-                "role": "system",
-                "content": "You will write python code that are sympy-compatible algebraic expressions to verify solutions to problems. The code should be a function, and store the answer in the 'answer' variable",
-            },
-            {
-                "role": "user",
-                "content": f"The problem:\n\n\n{problem_transcript}\n\n\nPreliminary solution:\n\n\n{prelim_solution}\n\n\nWrite an algebraic expression to solve this problem and verify the preliminary solution. Strictly no explanations outside the code block.",
-            },
-        ]
-        math_res = call_llm(msg_compute, coder_model)
-
-    st.markdown(f"#### Symbolic verification:\n\n{math_res}")
-    return math_res
-
-
-def execute_code(expression):
-    e = expression.replace("```", "")
-    code = e.replace("python", "")
-    exec(code, globals())
-
-
-def verify(problem_transcript, prelim_solution):
-    try:
-        expression = verify_by_symbolic(problem_transcript, prelim_solution)
-        execute_code(expression)
-        st.markdown(f"Answer: {answer}")
-    except:
-        verify(problem_transcript, prelim_solution)
 
 
 def entry():
