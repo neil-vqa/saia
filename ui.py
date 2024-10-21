@@ -142,6 +142,25 @@ def compute_by_llm_tir(transcript):
     return res
 
 
+def solution_pipeline(transcript, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            response = compute_by_llm_tir(transcript)
+
+            python_code, modified_response, last_boxed_sentence = extract_python_code(
+                response.choices[0].message.content
+            )
+
+            _, last_var_value = get_last_assigned_variable_name_and_value(python_code)
+
+            return python_code, modified_response, last_boxed_sentence, last_var_value
+        except SyntaxError:
+            if attempt < max_retries - 1:
+                continue
+            else:
+                raise
+
+
 def entry():
     st.subheader("Saia - The Solopreneur's AI Assistant")
     with st.expander("Read the instructions"):
@@ -166,10 +185,8 @@ def entry():
             with st.spinner(
                 "Understanding the problem, then outlining and executing a step-by-step plan..."
             ):
-                response = compute_by_llm_tir(transcript)
-
-                python_code, modified_response, last_boxed_sentence = (
-                    extract_python_code(response.choices[0].message.content)
+                python_code, modified_response, last_boxed_sentence, last_var_value = (
+                    solution_pipeline(transcript=transcript)
                 )
 
                 st.markdown(f"##### Transaction query solution:")
@@ -179,10 +196,6 @@ def entry():
 
                 with st.expander("View the code implementation"):
                     st.markdown(f"""```python\n{python_code}""")
-
-                _, last_var_value = get_last_assigned_variable_name_and_value(
-                    python_code
-                )
 
                 pattern = r"\\boxed\{([^\}]+)\}"
                 new_text = re.sub(
