@@ -161,6 +161,28 @@ def solution_pipeline(transcript, max_retries=3):
                 raise
 
 
+def write_invoice(transcript, new_text):
+    schema = {
+        "items": [{"name": "", "price": "", "quantity": "", "discount": ""}],
+        "total": "",
+    }
+    invoice_ie_prompt = [
+        {
+            "role": "system",
+            "content": "You will write an invoice from an order transcript. You will output in JSON format strictly according to the schema specified.",
+        },
+        {
+            "role": "user",
+            "content": "Order transcript: {transcript}\n{new_text}\n\nTask: Extract the items ordered, their prices, quantities, and if any discounts, as well as the total amount to pay. Strictly follow this schema: {schema}".format(
+                transcript=transcript, new_text=new_text, schema=schema
+            ),
+        },
+    ]
+
+    res = call_llm(messages=invoice_ie_prompt, client=ie_model)
+    return res
+
+
 def entry():
     st.subheader("Saia - The Solopreneur's AI Assistant")
     with st.expander("Read the instructions"):
@@ -204,26 +226,7 @@ def entry():
                 st.markdown(f"> {new_text}")
 
             with st.spinner("Writing invoice..."):
-                schema = {
-                    "items": [
-                        {"name": "", "price": "", "quantity": "", "discount": ""}
-                    ],
-                    "total": "",
-                }
-                invoice_ie_prompt = [
-                    {
-                        "role": "system",
-                        "content": "You will write an invoice from an order transcript. You will output in JSON format strictly according to the schema specified.",
-                    },
-                    {
-                        "role": "user",
-                        "content": "Order transcript: {transcript}\n{new_text}\n\nTask: Extract the items ordered, their prices, quantities, and if any discounts, as well as the total amount to pay. Strictly follow this schema: {schema}".format(
-                            transcript=transcript, new_text=new_text, schema=schema
-                        ),
-                    },
-                ]
-                res = call_llm(messages=invoice_ie_prompt, client=ie_model)
-
+                res = write_invoice(transcript=transcript, new_text=new_text)
                 with st.expander("View invoice"):
                     st.markdown(f"{res}")
 
