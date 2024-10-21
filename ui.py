@@ -9,10 +9,12 @@ from transformers import pipeline
 
 load_dotenv()
 
+ie_model_url = os.environ.get("IE_MODEL", "http://localhost:8706")
 math_model_url = os.environ.get("MATH_MODEL", "http://localhost:8708")
 
 stt_model = WhisperModel("medium.en", device="cpu", compute_type="int8")
 math_model = openai.OpenAI(base_url=math_model_url, api_key="sk-no-key-required")
+ie_model = openai.OpenAI(base_url=ie_model_url, api_key="sk-no-key-required")
 classifier_model = pipeline(
     "zero-shot-classification", model="tasksource/deberta-base-long-nli"
 )
@@ -188,8 +190,32 @@ def entry():
                 )
                 st.markdown(f"> {new_text}")
 
+            with st.spinner("Writing invoice..."):
+                schema = {
+                    "items": [
+                        {"name": "", "price": "", "quantity": "", "discount": ""}
+                    ],
+                    "total": "",
+                }
+                invoice_ie_prompt = [
+                    {
+                        "role": "system",
+                        "content": "You will write an invoice from an order transcript. You will output in JSON format strictly according to the schema specified.",
+                    },
+                    {
+                        "role": "user",
+                        "content": "Order transcript: {transcript}\n{new_text}\n\nTask: Extract the items ordered, their prices, quantities, and if any discounts, as well as the total amount to pay. Strictly follow this schema: {schema}".format(
+                            transcript=transcript, new_text=new_text, schema=schema
+                        ),
+                    },
+                ]
+                res = call_llm(messages=invoice_ie_prompt, client=ie_model)
+
+                with st.expander("View invoice"):
+                    st.markdown(f"{res}")
+
         else:
-            st.markdown("Your query is not an order transaction.")
+            st.markdown("> Your query is not an order transaction.")
 
 
 if __name__ == "__main__":
