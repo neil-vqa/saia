@@ -1,0 +1,14 @@
+docker build -t saia-app .
+
+save the Docker image as a tar file:
+docker save -o ./saia-app-dist.tar saia-app
+load the image tar file:
+docker load -i ./saia-app-dist.tar
+
+docker run --name saia-app --network host -p 8501:8501 -v $(pwd):/app --user $(id -u):$(id -g) -e .env -d saia-app
+
+llms:
+docker run --name Qwen2.5-Math-7B-Instruct-Q4_K_M -v ./local_models:/models -p 8708:8000 -d ghcr.io/ggerganov/llama.cpp:server --model /models/Qwen2.5-Math-7B-Instruct-Q4_K_M.gguf --port 8000 --host 0.0.0.0
+
+docker run --name josiefied-qwen2.5-1.5b-instruct-abliterated-v1.Q6_K -v ./local_models:/models -p 8706:8000 -d ghcr.io/ggerganov/llama.cpp:server --model /models/josiefied-qwen2.5-1.5b-instruct-abliterated-v1.Q6_K.gguf --port 8000 --host 0.0.0.0
+
