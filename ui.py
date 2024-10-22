@@ -1,11 +1,13 @@
 import ast
 import os
+import difflib
 import re
 import openai
 import streamlit as st
 from faster_whisper import WhisperModel
 from dotenv import load_dotenv
 from transformers import pipeline
+from gliner import GLiNER
 
 load_dotenv()
 
@@ -15,6 +17,7 @@ math_model_url = os.environ.get("MATH_MODEL", "http://localhost:8708")
 stt_model = WhisperModel("medium.en", device="cpu", compute_type="int8")
 math_model = openai.OpenAI(base_url=math_model_url, api_key="sk-no-key-required")
 ie_model = openai.OpenAI(base_url=ie_model_url, api_key="sk-no-key-required")
+ner_model = GLiNER.from_pretrained("numind/NuNerZero")
 classifier_model = pipeline(
     "zero-shot-classification", model="tasksource/deberta-base-long-nli"
 )
@@ -183,6 +186,107 @@ def write_invoice(transcript, new_text):
     return res
 
 
+def merge_entities(entities):
+    if not entities:
+        return []
+    merged = []
+    current = entities[0]
+    for next_entity in entities[1:]:
+        if next_entity["entity"] == current["entity"] and (
+            next_entity["start"] == current["end"] + 1
+            or next_entity["start"] == current["end"]
+        ):
+            current["word"] += " " + next_entity["word"]
+            current["end"] = next_entity["end"]
+        else:
+            merged.append(current)
+            current = next_entity
+    merged.append(current)
+    return merged
+
+
+def extract_ordered_items(transcript):
+    labels = ["ordered_item"]
+
+    r = {
+        "text": transcript,
+        "entities": [
+            {
+                "entity": entity["label"],
+                "word": entity["text"],
+                "start": entity["start"],
+                "end": entity["end"],
+                "score": 0,
+            }
+            for entity in ner_model.predict_entities(transcript, labels, threshold=0.3)
+        ],
+    }
+    r["entities"] = merge_entities(r["entities"])
+
+    items = ""
+    for item in r["entities"]:
+        items = f"{item['word']}, {items}"
+    return items
+
+
+def get_variants(ordered_items: str):
+    ordered_items = ordered_items.lower()
+    variant_pattern = re.compile(r"\b(large|medium|small)\b")
+
+    items_witn_variants = []
+    for item in ordered_items.split(",")[:-1]:
+        item = item.strip()
+        match = variant_pattern.search(item)
+        if match:
+            size = match.group(0)
+            name = item.replace(size, "").strip()
+            items_witn_variants.append((name, size))
+
+    return items_witn_variants
+
+
+def find_closest_match(input_str, choices):
+    matches = difflib.get_close_matches(input_str, choices, n=1, cutoff=0.6)
+    return matches[0] if matches else None
+
+
+def get_price(product_name, variant, products, variant_class="size"):
+    names = {product["name"] for product in products}
+    variants = {product[variant_class] for product in products}
+
+    # Find the closest matches
+    closest_product_name = find_closest_match(product_name, names)
+    closest_variant = find_closest_match(variant, variants) if variant else None
+
+    if closest_product_name and closest_variant:
+        # Filter the products to get the price
+        for product in products:
+            if (
+                product["name"] == closest_product_name
+                and product[variant_class] == closest_variant
+            ):
+                return product["price"]
+    elif closest_product_name:
+        # If variant is not provided, find the first match with the closest product_name
+        for product in products:
+            if product["name"] == closest_product_name:
+                return product["price"]
+    return None
+
+
+products = [
+    {"name": "Americano", "size": "large", "price": 90},
+    {"name": "Americano", "size": "medium", "price": 80},
+    {"name": "Americano", "size": "small", "price": 50},
+    {"name": "Vanilla Latte", "size": "large", "price": 110},
+    {"name": "Vanilla Latte", "size": "medium", "price": 100},
+    {"name": "Vanilla Latte", "size": "small", "price": 50},
+    {"name": "Strawberry Matcha", "size": "large", "price": 130},
+    {"name": "Strawberry Matcha", "size": "medium", "price": 120},
+    {"name": "Strawberry Matcha", "size": "small", "price": 50},
+]
+
+
 def entry():
     st.subheader("Saia - The Solopreneur's AI Assistant")
     with st.expander("Read the instructions"):
@@ -207,6 +311,14 @@ def entry():
             with st.spinner(
                 "Understanding the problem, then outlining and executing a step-by-step plan..."
             ):
+                items = extract_ordered_items(transcript)
+                items_with_variants = get_variants(items)
+                price_ref = ""
+                for name, variant in items_with_variants:
+                    price = get_price(name, variant, products)
+                    price_ref = f"{name} {variant}: {price} pesos\n{price_ref}"
+
+                transcript = f"{transcript}\n\n{price_ref}"
                 python_code, modified_response, last_boxed_sentence, last_var_value = (
                     solution_pipeline(transcript=transcript)
                 )
