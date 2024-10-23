@@ -3,7 +3,7 @@ name = "saia"
 version = "0.1.0"
 description = ""
 authors = ["Neil Van Alino <nvq.alino@gmail.com>"]
-license = "MIT"
+license = "GNU GPLv3"
 readme = "README.md"
 package-mode = false
 
