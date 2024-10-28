@@ -142,7 +142,7 @@ def compute_by_llm_tir(transcript):
         temperature=0.7,
     )
 
-    return res
+    return res.choices[0].message.content
 
 
 def solution_pipeline(transcript, max_retries=3):
@@ -151,7 +151,7 @@ def solution_pipeline(transcript, max_retries=3):
             response = compute_by_llm_tir(transcript)
 
             python_code, modified_response, last_boxed_sentence = extract_python_code(
-                response.choices[0].message.content
+                response
             )
 
             _, last_var_value = get_last_assigned_variable_name_and_value(python_code)
@@ -176,14 +176,42 @@ def write_invoice(transcript, new_text):
         },
         {
             "role": "user",
-            "content": "Order transcript: {transcript}\n{new_text}\n\nTask: Extract the items ordered, their prices, quantities, and if any discounts, as well as the total amount to pay. Strictly follow this schema: {schema}".format(
+            "content": "Order transcript: {transcript}\n{new_text}\n\nTask: Extract the items ordered, their prices, quantities, and if any discounts, as well as the total amount to pay. Strictly follow this JSON schema: {schema}".format(
                 transcript=transcript, new_text=new_text, schema=schema
             ),
         },
     ]
 
-    res = call_llm(messages=invoice_ie_prompt, client=ie_model)
-    return res
+    res = ie_model.chat.completions.create(
+        model="local-llm",
+        messages=invoice_ie_prompt,
+        max_tokens=4096,
+        temperature=0.7,
+        response_format={
+            "type": "json_object",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "price": {"type": "number"},
+                                "quantity": {"type": "number"},
+                                "discount": {"type": "number"},
+                            },
+                            "required": ["name", "price", "quantity", "discount"],
+                        },
+                    },
+                    "total": {"type": "number"},
+                },
+                "required": ["items", "total"],
+            },
+        },
+    )
+    return res.choices[0].message.content
 
 
 def merge_entities(entities):
@@ -340,7 +368,7 @@ def entry():
             with st.spinner("Writing invoice..."):
                 res = write_invoice(transcript=transcript, new_text=new_text)
                 with st.expander("View invoice"):
-                    st.markdown(f"{res}")
+                    st.markdown(f"```json\n\n{res}")
 
         else:
             st.markdown("> Your query is not an order transaction.")
