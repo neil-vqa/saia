@@ -337,7 +337,7 @@ def entry():
         output = classifier_model(transcript, query_labels)
         if output["scores"][0] > 0.8:
             with st.spinner(
-                "Understanding the problem, then outlining and executing a step-by-step plan..."
+                "Understanding the problem, then outlining and executing a step-by-step plan to solve it..."
             ):
                 items = extract_ordered_items(transcript)
                 items_with_variants = get_variants(items)
@@ -353,17 +353,17 @@ def entry():
 
                 st.markdown(f"##### Transaction query solution:")
 
-                with st.expander("Read the step-by-step plan"):
-                    st.markdown(modified_response)
-
-                with st.expander("View the code implementation"):
-                    st.markdown(f"""```python\n{python_code}""")
-
                 pattern = r"\\boxed\{([^\}]+)\}"
                 new_text = re.sub(
                     pattern, f"{last_var_value}", last_boxed_sentence, count=1
                 )
                 st.markdown(f"> {new_text}")
+
+                with st.expander("Read the step-by-step plan"):
+                    st.markdown(modified_response)
+
+                with st.expander("View the code implementation"):
+                    st.markdown(f"""```python\n{python_code}""")
 
             with st.spinner("Writing invoice..."):
                 res = write_invoice(transcript=transcript, new_text=new_text)
