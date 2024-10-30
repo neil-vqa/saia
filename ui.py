@@ -14,7 +14,7 @@ load_dotenv()
 ie_model_url = os.environ.get("IE_MODEL", "http://localhost:8706")
 math_model_url = os.environ.get("MATH_MODEL", "http://localhost:8708")
 
-stt_model = WhisperModel("medium.en", device="cpu", compute_type="int8")
+stt_model = WhisperModel("small.en", device="cpu", compute_type="int8")
 math_model = openai.OpenAI(base_url=math_model_url, api_key="sk-no-key-required")
 ie_model = openai.OpenAI(base_url=ie_model_url, api_key="sk-no-key-required")
 ner_model = GLiNER.from_pretrained("numind/NuNerZero")
